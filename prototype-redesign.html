@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piluli — варианты редизайна</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { color-scheme: light; }
+  body { margin: 0; min-width: 360px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  button, input { font: inherit; }
+  button { cursor: pointer; }
+  .variant { min-height: 100vh; display: none; }
+  .variant.active { display: block; }
+  .prototype-switcher { position: fixed; z-index: 99; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; padding: 9px 12px; border: 1px solid #ffffff38; border-radius: 999px; background: #161a22; color: white; box-shadow: 0 10px 35px #0004; font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .prototype-switcher button { width: 30px; height: 30px; border: 0; border-radius: 50%; background: #ffffff16; color: white; font-size: 16px; }
+  .prototype-switcher button:hover { background: #ffffff30; }
+  .switch-name { min-width: 180px; text-align: center; }
+  .switch-name small { color: #9ba4b4; }
+
+  /* Variant 2 — clean catalog: precise, cool, information-dense. */
+  .catalog { background: #f4f6f9; color: #202a39; }
+  .catalog-shell { display: grid; grid-template-columns: 242px minmax(0, 1fr); min-height: 100vh; }
+  .catalog-sidebar { padding: 27px 18px; border-right: 1px solid #dce2e9; background: #fbfcfd; }
+  .catalog-brand { display: flex; align-items: center; gap: 10px; padding: 0 12px 30px; font-size: 16px; font-weight: 750; letter-spacing: -.04em; }
+  .catalog-mark { display: grid; grid-template-columns: repeat(3, 5px); align-items: center; gap: 3px; height: 24px; transform: rotate(-7deg); }
+  .catalog-mark i { height: 16px; border-radius: 9px; background: #ef654c; }
+  .catalog-mark i:nth-child(2) { height: 23px; }
+  .catalog-mark i:nth-child(3) { height: 12px; }
+  .side-label { padding: 0 12px; margin: 13px 0 8px; color: #8b96a5; font: 10px ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+  .side-link { display: flex; justify-content: space-between; align-items: center; padding: 11px 12px; border-radius: 7px; color: #647184; font-size: 13px; }
+  .side-link.active { background: #e9efff; color: #2957c8; font-weight: 650; }
+  .side-link span:last-child { color: #9aa4b2; font: 11px ui-monospace, monospace; }
+  .project-card { margin: 33px 5px 0; padding: 13px; border: 1px solid #e0e5eb; border-radius: 8px; background: white; }
+  .project-card label { display: block; margin-bottom: 8px; color: #8993a2; font: 9px ui-monospace, monospace; text-transform: uppercase; }
+  .project-card strong { display: block; overflow: hidden; text-overflow: ellipsis; font: 12px ui-monospace, monospace; white-space: nowrap; }
+  .project-card small { display: block; margin-top: 8px; color: #8290a1; font-size: 10px; }
+  .catalog-main { width: min(1420px, 100%); margin: 0 auto; padding: 27px 42px 90px; }
+  .catalog-top { display: flex; justify-content: space-between; align-items: center; min-height: 40px; margin-bottom: 43px; }
+  .breadcrumb { color: #8c96a4; font: 11px ui-monospace, monospace; }
+  .breadcrumb b { color: #3f4b5c; font-weight: 500; }
+  .local-indicator { display: flex; align-items: center; gap: 7px; color: #627083; font: 11px ui-monospace, monospace; }
+  .local-indicator i { width: 7px; height: 7px; border-radius: 50%; background: #319b73; box-shadow: 0 0 0 3px #319b731c; }
+  .catalog-heading { display: flex; justify-content: space-between; align-items: end; gap: 28px; margin-bottom: 27px; }
+  .kicker { margin: 0 0 10px; color: #315bb9; font: 10px ui-monospace, monospace; letter-spacing: .13em; text-transform: uppercase; }
+  .catalog-heading h1 { margin: 0; font-size: clamp(32px, 4vw, 46px); font-weight: 650; letter-spacing: -.055em; }
+  .catalog-heading p { max-width: 430px; margin: 0; color: #788494; font-size: 13px; line-height: 1.5; }
+  .catalog-summary { display: flex; gap: 1px; margin-bottom: 27px; border: 1px solid #dde3ea; border-radius: 9px; background: #dde3ea; overflow: hidden; }
+  .summary-cell { flex: 1; padding: 14px 17px; background: #fff; }
+  .summary-cell span { display: block; color: #8a96a5; font: 10px ui-monospace, monospace; text-transform: uppercase; }
+  .summary-cell strong { display: block; margin-top: 5px; font-size: 18px; letter-spacing: -.035em; }
+  .summary-cell strong small { color: #8a96a5; font-size: 11px; font-weight: 450; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 0 15px; }
+  .catalog-tabs { display: flex; gap: 22px; align-self: stretch; }
+  .catalog-tab { position: relative; padding: 9px 0; color: #7a8796; font-size: 12px; }
+  .catalog-tab.active { color: #26364d; font-weight: 650; }
+  .catalog-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -16px; height: 2px; background: #3868d0; }
+  .catalog-tab small { margin-left: 5px; color: #929dad; font: 10px ui-monospace, monospace; }
+  .tool-actions { display: flex; gap: 8px; }
+  .searchbox { min-width: 220px; padding: 9px 12px; border: 1px solid #dbe1e8; border-radius: 6px; background: white; color: #8792a0; font-size: 11px; }
+  .blue-button { padding: 9px 13px; border: 0; border-radius: 6px; background: #315fca; color: white; font-size: 11px; font-weight: 650; }
+  .package-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #dfe4ea; border-radius: 8px; overflow: hidden; }
+  .package-table th { padding: 12px 13px; border-bottom: 1px solid #e5e9ee; color: #8994a2; font: 9px ui-monospace, monospace; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
+  .package-table td { padding: 15px 13px; border-bottom: 1px solid #edf0f3; vertical-align: middle; }
+  .package-table tr:last-child td { border-bottom: 0; }
+  .package-table tr:hover td { background: #fafbfd; }
+  .pkg-name { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 650; }
+  .pkg-icon { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 7px; background: #edf2fb; color: #4269b7; font: 11px ui-monospace, monospace; }
+  .pkg-source { margin: 5px 0 0 36px; color: #929dab; font: 9px ui-monospace, monospace; }
+  .origin-pill { display: inline-block; padding: 4px 7px; border: 1px solid #dbe2ed; border-radius: 999px; color: #67768a; font-size: 9px; }
+  .origin-pill.user { border-color: #d4dff7; background: #f4f7ff; color: #4768ad; }
+  .resource-list { display: flex; gap: 4px; }
+  .resource { padding: 4px 6px; border-radius: 4px; background: #f0f2f5; color: #717d8c; font: 8px ui-monospace, monospace; text-transform: uppercase; }
+  .state { display: flex; align-items: center; gap: 6px; color: #348368; font-size: 10px; white-space: nowrap; }
+  .state i { width: 6px; height: 6px; border-radius: 50%; background: #39a07a; }
+  .state.off { color: #a65f54; }
+  .state.off i { background: #d67b69; }
+  .switch { position: relative; display: inline-block; width: 35px; height: 19px; border: 0; border-radius: 20px; background: #b9c2cd; vertical-align: middle; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 13px; height: 13px; border-radius: 50%; background: white; transition: transform .2s; }
+  .switch.on { background: #436fd1; }
+  .switch.on::after { transform: translateX(16px); }
+  .row-menu { color: #929dab; font-size: 18px; }
+  .catalog-note { display: flex; justify-content: space-between; margin-top: 16px; color: #8b96a4; font: 10px ui-monospace, monospace; }
+
+  /* Variant 3 — workshop desk: tactile editorial project workspace. */
+  .workshop { background: #f1eee5; color: #252822; }
+  .workshop-shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100vh; max-width: 1600px; margin: auto; }
+  .workshop-sidebar { position: relative; padding: 30px 22px; border-right: 1px solid #d3cec1; background: #e9e5d9; }
+  .workshop-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 57px; font: 700 17px Georgia, serif; letter-spacing: -.04em; }
+  .workshop-mark { position: relative; width: 25px; height: 25px; border: 1px solid #d45b3f; border-radius: 50%; }
+  .workshop-mark::before, .workshop-mark::after { content: ""; position: absolute; border-radius: 50%; background: #d45b3f; }
+  .workshop-mark::before { width: 5px; height: 5px; left: 5px; top: 5px; box-shadow: 8px 8px 0 #d45b3f; }
+  .workshop-mark::after { width: 5px; height: 5px; top: 5px; right: 5px; }
+  .workshop-caption { margin: 0 0 12px 9px; color: #9c9382; font: 9px ui-monospace, monospace; letter-spacing: .13em; text-transform: uppercase; }
+  .workshop-link { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid #d9d4c8; color: #706e63; font-size: 12px; }
+  .workshop-link.active { color: #a6422d; font-weight: 700; }
+  .workshop-link small { color: #a29a8b; font: 10px ui-monospace, monospace; }
+  .workshop-project { position: absolute; left: 22px; right: 22px; bottom: 96px; padding: 15px 13px; border-left: 2px solid #d45b3f; background: #f4f1e9; }
+  .workshop-project span { display: block; margin-bottom: 8px; color: #9c9382; font: 9px ui-monospace, monospace; text-transform: uppercase; }
+  .workshop-project strong { display: block; font: 12px ui-monospace, monospace; }
+  .workshop-project small { display: block; margin-top: 8px; color: #8c887d; font-size: 10px; }
+  .workshop-main { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .65fr); align-items: start; gap: 42px; padding: 34px 44px 90px; }
+  .workshop-content { min-width: 0; }
+  .workshop-top { display: flex; justify-content: space-between; align-items: center; grid-column: 1 / -1; margin-bottom: 3px; color: #8d897e; font: 10px ui-monospace, monospace; }
+  .workshop-top strong { color: #32815f; font-weight: 500; }
+  .workshop-hero { padding: 25px 0 33px; border-bottom: 1px solid #cfc9bb; }
+  .workshop-hero .kicker { color: #c25337; }
+  .workshop-hero h1 { max-width: 650px; margin: 0; font: 400 clamp(42px, 5vw, 67px)/.94 Georgia, serif; letter-spacing: -.055em; }
+  .workshop-hero h1 em { color: #c25337; font-weight: 400; }
+  .workshop-hero p { max-width: 485px; margin: 20px 0 0; color: #77756c; font: 13px/1.6 Georgia, serif; }
+  .bench-heading { display: flex; justify-content: space-between; align-items: end; gap: 10px; margin: 30px 0 12px; }
+  .bench-heading h2 { margin: 0; font: 400 24px Georgia, serif; letter-spacing: -.03em; }
+  .bench-heading small { color: #9b9588; font: 9px ui-monospace, monospace; }
+  .workshop-filter { width: 100%; padding: 10px 0; border: 0; border-bottom: 1px solid #cfc9bb; outline: none; background: transparent; color: #4a4c44; font: 11px ui-monospace, monospace; }
+  .workshop-package { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 74px; padding: 14px 0; border-bottom: 1px solid #d7d1c4; }
+  .workshop-package.selected { position: relative; padding-right: 12px; padding-left: 12px; background: #e7e1d4; }
+  .workshop-package.selected::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: #c25337; }
+  .workshop-pkg-name { display: flex; align-items: baseline; gap: 8px; font-size: 12px; font-weight: 700; }
+  .workshop-pkg-name small { color: #969083; font: 9px ui-monospace, monospace; }
+  .workshop-source { display: block; margin-top: 6px; color: #878477; font: 9px ui-monospace, monospace; }
+  .workshop-meta { display: flex; gap: 5px; margin-top: 7px; }
+  .workshop-meta span { color: #888477; font: 8px ui-monospace, monospace; text-transform: uppercase; }
+  .workshop-meta span + span::before { content: "·"; margin-right: 5px; color: #c25337; }
+  .workshop-controls { display: flex; align-items: center; gap: 14px; }
+  .workshop-controls small { color: #a29a8b; font: 9px ui-monospace, monospace; }
+  .workshop-toggle { width: 31px; height: 17px; border: 0; border-radius: 12px; background: #bbb5a8; }
+  .workshop-toggle.on { background: #397d62; }
+  .workshop-toggle::after { content: ""; display: block; width: 11px; height: 11px; margin: 3px; border-radius: 50%; background: #f9f7f0; transition: transform .2s; }
+  .workshop-toggle.on::after { transform: translateX(14px); }
+  .inspector { position: sticky; top: 26px; margin-top: 142px; padding: 22px; border: 1px solid #d7d1c4; background: #f7f4ec; }
+  .inspector-head { display: flex; justify-content: space-between; align-items: start; padding-bottom: 19px; border-bottom: 1px solid #d7d1c4; }
+  .inspector-head label { color: #b04d34; font: 9px ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
+  .inspector-head h2 { margin: 8px 0 4px; font: 400 23px Georgia, serif; }
+  .inspector-head small { color: #8d897e; font: 9px ui-monospace, monospace; }
+  .inspector-index { color: #c6beae; font: 28px Georgia, serif; }
+  .inspector-section { padding: 17px 0; border-bottom: 1px solid #e0dbd0; }
+  .inspector-section:last-child { border-bottom: 0; padding-bottom: 0; }
+  .inspector-section h3 { display: flex; justify-content: space-between; margin: 0 0 12px; color: #8e897d; font: 9px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .inspector-section h3 b { color: #c25337; font-weight: 500; }
+  .inspector-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; font-size: 11px; }
+  .inspector-row small { color: #969083; font: 9px ui-monospace, monospace; }
+  .inspector-callout { margin-top: 15px; padding: 11px 12px; background: #ece8dc; color: #78766c; font: 10px/1.5 ui-monospace, monospace; }
+  .workshop-foot { position: fixed; bottom: 0; left: 240px; right: 0; display: flex; justify-content: space-between; padding: 13px 44px; border-top: 1px solid #d3cec1; background: #f1eee5ed; color: #8d897e; font: 9px ui-monospace, monospace; backdrop-filter: blur(8px); }
+  .workshop-foot b { color: #a6422d; font-weight: 500; }
+
+  @media (max-width: 980px) {
+    .catalog-shell, .workshop-shell { grid-template-columns: 190px minmax(0, 1fr); }
+    .catalog-main { padding-right: 23px; padding-left: 23px; }
+    .workshop-main { grid-template-columns: 1fr; padding: 25px; }
+    .workshop-top { grid-column: 1; }
+    .inspector { position: static; margin-top: 0; }
+    .workshop-foot { left: 190px; padding-right: 25px; padding-left: 25px; }
+  }
+  @media (max-width: 700px) {
+    .catalog-shell, .workshop-shell { display: block; }
+    .catalog-sidebar, .workshop-sidebar { display: none; }
+    .catalog-main { padding: 22px 15px 90px; }
+    .catalog-top { margin-bottom: 25px; }
+    .catalog-heading { align-items: start; flex-direction: column; }
+    .catalog-summary { display: grid; grid-template-columns: 1fr 1fr; }
+    .summary-cell { padding: 12px; }
+    .toolbar { align-items: stretch; flex-direction: column; }
+    .tool-actions { display: grid; grid-template-columns: 1fr auto; }
+    .searchbox { min-width: 0; }
+    .package-table th:nth-child(2), .package-table td:nth-child(2), .package-table th:nth-child(3), .package-table td:nth-child(3) { display: none; }
+    .package-table td { padding: 13px 8px; }
+    .package-table th { padding: 9px 8px; }
+    .state { font-size: 0; }
+    .switch-name { min-width: 155px; }
+    .workshop-main { padding: 20px 17px 90px; }
+    .workshop-top { margin-bottom: 6px; }
+    .workshop-hero { padding-top: 22px; }
+    .workshop-hero h1 { font-size: 46px; }
+    .workshop-foot { position: static; padding: 14px 17px; }
+    .prototype-switcher { bottom: 12px; }
+  }
+</style>
+</head>
+<body>
+<section class="variant catalog active" id="variant-2" aria-label="Вариант 2: каталог">
+  <div class="catalog-shell">
+    <aside class="catalog-sidebar">
+      <div class="catalog-brand"><span class="catalog-mark"><i></i><i></i><i></i></span>Piluli</div>
+      <p class="side-label">Проект</p>
+      <div class="side-link active"><span>Extensions</span><span>12</span></div>
+      <div class="side-link"><span>Skills</span><span>18</span></div>
+      <div class="side-link"><span>Настройки</span><span>···</span></div>
+      <p class="side-label" style="margin-top:32px">Область</p>
+      <div class="side-link active"><span>Текущий проект</span><span>⌄</span></div>
+      <div class="side-link"><span>Пользователь</span><span>26</span></div>
+      <div class="project-card"><label>Рабочая папка</label><strong>~/code/piluli</strong><small>Настройки · .pi/settings.json</small></div>
+    </aside>
+    <main class="catalog-main">
+      <div class="catalog-top"><div class="breadcrumb">РЕСУРСЫ&nbsp; / &nbsp;<b>ТЕКУЩИЙ ПРОЕКТ</b></div><div class="local-indicator"><i></i> только на этом устройстве</div></div>
+      <div class="catalog-heading"><div><p class="kicker">УПРАВЛЕНИЕ PI · PROJECT SCOPE</p><h1>Extensions</h1></div><p>Пользовательские пакеты остаются нетронутыми. Выключение здесь действует только в текущем проекте.</p></div>
+      <div class="catalog-summary">
+        <div class="summary-cell"><span>Всего в проекте</span><strong>38 <small>ресурсов</small></strong></div>
+        <div class="summary-cell"><span>Extensions</span><strong>12 <small>активны</small></strong></div>
+        <div class="summary-cell"><span>Унаследовано</span><strong>9 <small>от пользователя</small></strong></div>
+        <div class="summary-cell"><span>Отключено здесь</span><strong>2 <small>project override</small></strong></div>
+      </div>
+      <div class="toolbar">
+        <div class="catalog-tabs"><div class="catalog-tab active">Пакеты <small>26</small></div><div class="catalog-tab">Skills <small>18</small></div></div>
+        <div class="tool-actions"><div class="searchbox">⌕ &nbsp;Поиск пакета или source</div><button class="blue-button">+ Установить</button></div>
+      </div>
+      <table class="package-table">
+        <thead><tr><th>Пакет</th><th>Scope</th><th>Ресурсы</th><th>Состояние</th><th>Проект</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><div class="pkg-name"><span class="pkg-icon">π</span>pi-subagents</div><div class="pkg-source">npm:pi-subagents</div></td><td><span class="origin-pill user">Пользователь</span></td><td><div class="resource-list"><span class="resource">extension</span><span class="resource">skills</span></div></td><td><span class="state"><i></i>Активен</span></td><td><button class="switch on"></button></td><td class="row-menu">···</td></tr>
+          <tr><td><div class="pkg-name"><span class="pkg-icon">W</span>pi-web-access</div><div class="pkg-source">npm:pi-web-access</div></td><td><span class="origin-pill user">Пользователь</span></td><td><div class="resource-list"><span class="resource">extension</span></div></td><td><span class="state off"><i></i>Выключен здесь</span></td><td><button class="switch"></button></td><td class="row-menu">···</td></tr>
+          <tr><td><div class="pkg-name"><span class="pkg-icon">M</span>pi-memory-md</div><div class="pkg-source">git:github.com/VandeeFeng/pi-memory-md</div></td><td><span class="origin-pill user">Пользователь</span></td><td><div class="resource-list"><span class="resource">extension</span><span class="resource">skills</span></div></td><td><span class="state"><i></i>Активен</span></td><td><button class="switch on"></button></td><td class="row-menu">···</td></tr>
+          <tr><td><div class="pkg-name"><span class="pkg-icon">P</span>project-helper</div><div class="pkg-source">./tools/project-helper</div></td><td><span class="origin-pill">Проект</span></td><td><div class="resource-list"><span class="resource">extension</span><span class="resource">skills</span></div></td><td><span class="state"><i></i>Активен</span></td><td><button class="switch on"></button></td><td class="row-menu">···</td></tr>
+          <tr><td><div class="pkg-name"><span class="pkg-icon">T</span>pi-themes</div><div class="pkg-source">npm:pi-themes</div></td><td><span class="origin-pill user">Пользователь</span></td><td><div class="resource-list"><span class="resource">themes</span></div></td><td><span class="state"><i></i>Активен</span></td><td><button class="switch on"></button></td><td class="row-menu">···</td></tr>
+          <tr><td><div class="pkg-name"><span class="pkg-icon">A</span>pi-ask-user</div><div class="pkg-source">npm:pi-ask-user</div></td><td><span class="origin-pill user">Пользователь</span></td><td><div class="resource-list"><span class="resource">extension</span><span class="resource">skills</span></div></td><td><span class="state"><i></i>Активен</span></td><td><button class="switch on"></button></td><td class="row-menu">···</td></tr>
+        </tbody>
+      </table>
+      <div class="catalog-note"><span>Изменения сохраняются в .pi/settings.json</span><span>/reload · обновить ресурсы</span></div>
+    </main>
+  </div>
+</section>
+
+<section class="variant workshop" id="variant-3" aria-label="Вариант 3: мастерская">
+  <div class="workshop-shell">
+    <aside class="workshop-sidebar">
+      <div class="workshop-brand"><span class="workshop-mark"></span>Piluli / workshop</div>
+      <p class="workshop-caption">Инструменты</p>
+      <div class="workshop-link active"><span>Extensions</span><small>12</small></div>
+      <div class="workshop-link"><span>Skills</span><small>18</small></div>
+      <div class="workshop-link"><span>Пакеты</span><small>26</small></div>
+      <p class="workshop-caption" style="margin-top:32px">Контекст</p>
+      <div class="workshop-link active"><span>Этот проект</span><small>⌄</small></div>
+      <div class="workshop-link"><span>Настройки Pi</span><small>↗</small></div>
+      <div class="workshop-project"><span>Рабочая папка</span><strong>~/code/piluli</strong><small>Project settings<br>.pi/settings.json</small></div>
+    </aside>
+    <main class="workshop-main">
+      <div class="workshop-top"><span>СРЕДА&nbsp; / &nbsp;РАСШИРЕНИЯ</span><strong>● Локальный проект</strong></div>
+      <section class="workshop-content">
+        <div class="workshop-hero"><p class="kicker">СБОРКА ПРОЕКТА · 01</p><h1>Тонкая настройка<br><em>своей мастерской.</em></h1><p>Extensions из пользовательской установки можно приглушить здесь — только для этого проекта. Глобальные настройки останутся как были.</p></div>
+        <div class="bench-heading"><h2>Рабочий набор</h2><small>12 АКТИВНЫХ · 2 ВЫКЛЮЧЕНЫ</small></div>
+        <input class="workshop-filter" value="⌕   Найти пакет или источник" aria-label="Поиск">
+        <div class="workshop-package selected">
+          <div><div class="workshop-pkg-name">pi-subagents <small>v0.73.1</small></div><span class="workshop-source">npm:pi-subagents</span><div class="workshop-meta"><span>пользовательский</span><span>extension</span><span>skills</span></div></div>
+          <div class="workshop-controls"><small>В ПРОЕКТЕ</small><button class="workshop-toggle on" aria-label="Выключить в проекте"></button></div>
+        </div>
+        <div class="workshop-package">
+          <div><div class="workshop-pkg-name">pi-web-access <small>v0.34.0</small></div><span class="workshop-source">npm:pi-web-access</span><div class="workshop-meta"><span>пользовательский</span><span>extension</span></div></div>
+          <div class="workshop-controls"><small>В ПРОЕКТЕ</small><button class="workshop-toggle" aria-label="Включить в проекте"></button></div>
+        </div>
+        <div class="workshop-package">
+          <div><div class="workshop-pkg-name">pi-memory-md <small>v0.1.38</small></div><span class="workshop-source">git:github.com/VandeeFeng/pi-memory-md</span><div class="workshop-meta"><span>пользовательский</span><span>extension</span><span>skills</span></div></div>
+          <div class="workshop-controls"><small>В ПРОЕКТЕ</small><button class="workshop-toggle on" aria-label="Выключить в проекте"></button></div>
+        </div>
+        <div class="workshop-package">
+          <div><div class="workshop-pkg-name">project-helper <small>локальный</small></div><span class="workshop-source">./tools/project-helper</span><div class="workshop-meta"><span>проектный</span><span>extension</span><span>skills</span></div></div>
+          <div class="workshop-controls"><small>В ПРОЕКТЕ</small><button class="workshop-toggle on" aria-label="Выключить в проекте"></button></div>
+        </div>
+        <div class="workshop-package">
+          <div><div class="workshop-pkg-name">pi-ask-user <small>v0.15.1</small></div><span class="workshop-source">npm:pi-ask-user</span><div class="workshop-meta"><span>пользовательский</span><span>extension</span><span>skills</span></div></div>
+          <div class="workshop-controls"><small>В ПРОЕКТЕ</small><button class="workshop-toggle on" aria-label="Выключить в проекте"></button></div>
+        </div>
+      </section>
+      <aside class="inspector">
+        <div class="inspector-head"><div><label>Выбранный extension</label><h2>pi-subagents</h2><small>npm:pi-subagents</small></div><span class="inspector-index">01</span></div>
+        <div class="inspector-section"><h3>Источник <b>Пользователь</b></h3><div class="inspector-row"><span>Установлен глобально</span><small>ДА</small></div><div class="inspector-row"><span>Состояние в проекте</span><small>АКТИВЕН</small></div></div>
+        <div class="inspector-section"><h3>Состав пакета <b>02</b></h3><div class="inspector-row"><span>Extension</span><button class="workshop-toggle on" aria-label="Extension активен"></button></div><div class="inspector-row"><span>Skills</span><small>6 шт.</small></div><div class="inspector-row"><span>Prompts</span><small>2 шт.</small></div></div>
+        <div class="inspector-section"><h3>Действие для проекта</h3><div class="inspector-row"><span>Использовать extension</span><button class="workshop-toggle on" aria-label="Использовать extension"></button></div><div class="inspector-callout">Переключатель создаёт override в .pi/settings.json. Пользовательская установка не меняется.</div></div>
+      </aside>
+    </main>
+  </div>
+  <div class="workshop-foot"><span>PROJECT OVERRIDE&nbsp; · &nbsp;.pi/settings.json</span><span>Применить после <b>/reload</b></span></div>
+</section>
+
+<nav class="prototype-switcher" aria-label="Переключатель макетов">
+  <button id="previous" type="button" aria-label="Предыдущий макет">←</button>
+  <span class="switch-name" id="switch-name">2 <small>· Чистый каталог</small></span>
+  <button id="next" type="button" aria-label="Следующий макет">→</button>
+</nav>
+<script>
+  const variants = [
+    { id: "2", name: "Чистый каталог" },
+    { id: "3", name: "Рабочий стол мастерской" },
+  ];
+  let index = Math.max(0, variants.findIndex((variant) => variant.id === new URLSearchParams(location.search).get("variant")));
+  function showVariant() {
+    document.querySelectorAll(".variant").forEach((node) => node.classList.remove("active"));
+    document.querySelector(`#variant-${variants[index].id}`).classList.add("active");
+    document.querySelector("#switch-name").innerHTML = `${variants[index].id} <small>· ${variants[index].name}</small>`;
+    const url = new URL(location.href);
+    url.searchParams.set("variant", variants[index].id);
+    history.replaceState(null, "", url);
+  }
+  function move(delta) { index = (index + delta + variants.length) % variants.length; showVariant(); }
+  document.querySelector("#previous").addEventListener("click", () => move(-1));
+  document.querySelector("#next").addEventListener("click", () => move(1));
+  document.addEventListener("keydown", (event) => {
+    if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+    if (event.key === "ArrowLeft") move(-1);
+    if (event.key === "ArrowRight") move(1);
+  });
+  showVariant();
+</script>
+</body>
+</html>

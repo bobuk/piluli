@@ -1,0 +1,1 @@
+Use `bl` to manage the local `backlog.md`, and use it as the only way to read or modify that file; never open, edit, or rewrite backlog.md directly. Before starting backlog work, run `bl v`, choose a task by its visible ID, and successfully claim it with `bl take <id>`. Start work only after that command succeeds; if it loses a competing claim, run `bl v` again.

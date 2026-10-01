@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="piluli-token" content="__PILULI_TOKEN__">
+  <meta name="piluli-scope" content="__PILULI_SCOPE__">
+  <title>Piluli — Pi resources</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Piluli home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>Piluli</a>
+      <p class="nav-caption">Resources</p>
+      <nav class="views" aria-label="Resource types">
+        <button data-view="extensions" class="nav-item active" aria-current="page"><span>Extensions</span><span data-count="extensions">—</span></button>
+        <button data-view="skills" class="nav-item"><span>Skills</span><span data-count="skills">—</span></button>
+        <button data-view="prompts" class="nav-item"><span>Prompts</span><span data-count="prompts">—</span></button>
+        <button data-view="themes" class="nav-item"><span>Themes</span><span data-count="themes">—</span></button>
+        <button data-view="packages" class="nav-item"><span>Packages</span><span data-count="packages">—</span></button>
+      </nav>
+      <fieldset class="scope-field">
+        <legend class="nav-caption">Manage settings for</legend>
+        <label class="scope-option"><input type="radio" name="scope" value="project" checked><span>Current project</span><kbd>G</kbd></label>
+        <label class="scope-option"><input type="radio" name="scope" value="user"><span>User</span></label>
+      </fieldset>
+      <section class="project-card" aria-label="Project directory"><span>Project directory</span><strong id="project-name">Loading…</strong><code id="project-path"></code></section>
+    </aside>
+
+    <main>
+      <header class="topbar"><p class="breadcrumb">RESOURCES <span>/</span> <b id="scope-label">CURRENT PROJECT</b></p></header>
+      <section class="heading">
+        <h1 id="view-title">Extensions</h1>
+        <p id="scope-description">Only this project. User settings stay unchanged.</p>
+      </section>
+      <section class="summary" aria-label="Summary">
+        <div><span>Total</span><strong id="total">—</strong></div>
+        <div><span id="enabled-label">Enabled</span><strong id="enabled-count">—</strong></div>
+        <div><span id="inherited-label">Inherited</span><strong id="inherited-count">—</strong></div>
+        <div><span>Unsaved</span><strong id="pending-count">0</strong></div>
+      </section>
+      <div class="toolbar">
+        <p id="result-count">Loading…</p>
+        <div class="toolbar-actions">
+          <label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="Search resources" placeholder="Name or source" autocomplete="off"><kbd>/</kbd></label>
+          <button id="refresh" class="button secondary" title="Refresh list (R)">↻ <span>Refresh</span></button>
+          <button id="update-all" class="button secondary" hidden>Update packages</button>
+          <button id="install" class="button primary">+ Install package</button>
+        </div>
+      </div>
+      <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
+      <div id="bulk-actions" class="bulk-actions" role="group" aria-label="Bulk editing">
+        <span id="selection-count" role="status" aria-live="polite">0 selected</span>
+        <button id="bulk-enable" class="button secondary" disabled>Enable selected</button>
+        <button id="bulk-disable" class="button secondary" disabled>Disable selected</button>
+        <button id="clear-selection" class="button secondary" disabled>Clear selection</button>
+      </div>
+      <div class="table-wrap" id="list-region" aria-busy="true">
+        <table id="resource-table" aria-label="Pi resources" tabindex="0" aria-describedby="keyboard-help">
+          <thead><tr><th scope="col"><label class="table-select"><input id="select-all" class="bulk-check" type="checkbox" aria-label="Select all filtered resources"><span id="name-column">Resource</span></label></th><th scope="col">Origin</th><th scope="col">Status</th><th scope="col" id="actions-column">In project</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="4" class="empty">Loading resources…</td></tr></tbody>
+        </table>
+      </div>
+      <section class="details" aria-label="Focused resource"><strong id="detail-name">Choose a resource</strong><p id="detail-description"></p><code id="detail-path"></code></section>
+      <footer><code id="settings-path">.pi/settings.json</code><span>Run <code>/reload</code> in Pi to load changes</span></footer>
+      <div class="apply-bar">
+        <p id="keyboard-help"><kbd>↑</kbd><kbd>↓</kbd> row <span>·</span> <kbd>←</kbd><kbd>→</kbd> section <span>·</span> <kbd>Space</kbd> toggle <span>·</span> <kbd>Enter</kbd> apply</p>
+        <div><button id="discard" class="button secondary" disabled>Discard</button><button id="apply" class="button primary" disabled>Apply <span id="apply-count"></span><kbd>↵</kbd></button></div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="install-dialog" aria-labelledby="install-title">
+    <form id="install-form" class="dialog-body">
+      <h2 id="install-title">Install in project</h2>
+      <label for="source">Source</label><input id="source" name="source" required autocomplete="off" spellcheck="false" placeholder="npm:package or git:github.com/user/repo">
+      <p>Installation runs immediately and may execute code with your permissions. Only install trusted packages.</p>
+      <p id="install-notice" role="status" aria-live="polite" hidden></p>
+      <div class="dialog-actions"><button type="button" class="button secondary" data-close="install-dialog">Cancel</button><button type="submit" class="button primary">Install</button></div>
+    </form>
+  </dialog>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title">
+    <form method="dialog" class="dialog-body"><h2 id="confirm-title">Continue?</h2><p id="confirm-text"></p>
+      <div class="dialog-actions"><button class="button secondary" value="cancel" autofocus>Cancel</button><button id="confirm-ok" class="button primary" value="confirm">Continue</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
