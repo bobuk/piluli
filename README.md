@@ -51,11 +51,33 @@ Useful options shared by both:
 --pi-command PATH       Pi executable (default: pi)
 ```
 
-Web-only options:
+### Web address
+
+Use `on [host] [port]` to choose where the web UI listens:
 
 ```sh
-piluli --no-browser --port 9000
+piluli on                         # 127.0.0.1:5432
+piluli on localhost 9000          # host and port
+piluli on 9000                    # port only
+piluli --no-browser on 127.0.0.1 9000
 ```
+
+`PILULI_WEB=host:port` overrides both defaults. Explicit CLI values win over the environment; the older `--host` and `--port` options remain supported.
+
+```sh
+PILULI_WEB=localhost:8123 piluli
+piluli --host localhost --port 8123
+```
+
+Ports must be decimal numbers from **1** through **65535**. Piluli binds the address before starting and exits with a clear error if the port is already occupied.
+
+A wildcard is deliberately CLI-only:
+
+```sh
+piluli on 0.0.0.0 9000
+```
+
+Piluli prints a network-exposure warning and requires an interactive `yes` before starting. `PILULI_WEB=0.0.0.0:9000` is rejected, as is a non-interactive wildcard launch. A foot-gun may be available, but it does not need an automatic trigger.
 
 The TUI needs an interactive terminal and stdlib `curses`, normally included on macOS and Linux. On Windows, take the browser pill.
 
@@ -115,9 +137,10 @@ Install, update, and remove happen immediately rather than through **Apply**. Sa
 
 Only install sources you trust. Package installation may execute code with your permissions, which is a very efficient way for trust issues to become filesystem issues.
 
-## 🔒 Local by design
+## 🔒 Local by default
 
-- The web server binds only to loopback.
+- The web server binds to loopback unless you explicitly confirm a wildcard CLI address.
+- `PILULI_WEB` cannot enable wildcard binding.
 - Requests check `Host`, `Origin`, and a per-process API token.
 - CSP blocks external scripts.
 - Browsing resources does not execute them.
@@ -125,7 +148,7 @@ Only install sources you trust. Package installation may execute code with your 
 - Settings writes are atomic, revision-checked, and locked between Piluli/Pilulit instances.
 - Existing permissions are preserved; writes through a `settings.json` symlink are rejected.
 
-Do not expose the web port to a network. Piluli is a local tool, not a tiny SaaS business waiting to happen.
+A wildcard binding exposes the UI and package operations to every client that can reach that port. Use it only on a trusted network. Piluli is still not a tiny SaaS business waiting to happen.
 
 ## 🛠️ Development
 

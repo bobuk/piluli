@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
+import socket
 import subprocess
 import sys
 import tempfile
@@ -10,6 +13,7 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -18,6 +22,69 @@ import build
 import piluli
 from piluli_core import PiManager
 from pilulit import clip, terminal_text
+
+
+class WebEndpointTests(unittest.TestCase):
+    @staticmethod
+    def args(endpoint=(), host=None, port=None):
+        return SimpleNamespace(web_endpoint=list(endpoint), host=host, port=port)
+
+    def test_defaults_and_environment_override(self):
+        self.assertEqual(piluli.resolve_web_endpoint(self.args(), {}), ("127.0.0.1", 5432))
+        self.assertEqual(
+            piluli.resolve_web_endpoint(self.args(), {"PILULI_WEB": "devbox.local:8123"}),
+            ("devbox.local", 8123),
+        )
+
+    def test_cli_endpoint_overrides_environment(self):
+        environment = {"PILULI_WEB": "localhost:7000"}
+        self.assertEqual(
+            piluli.resolve_web_endpoint(self.args(("on", "127.0.0.1", "9000")), environment),
+            ("127.0.0.1", 9000),
+        )
+        self.assertEqual(
+            piluli.resolve_web_endpoint(self.args(("on", "9001")), environment),
+            ("localhost", 9001),
+        )
+        self.assertEqual(
+            piluli.resolve_web_endpoint(self.args(host="devbox.local", port=9002), environment),
+            ("devbox.local", 9002),
+        )
+
+    def test_port_must_be_numeric_and_in_range(self):
+        for value in ("nope", "0", "65536", "-1", "1.5"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                piluli.parse_port(value)
+        self.assertEqual(piluli.parse_port("1"), 1)
+        self.assertEqual(piluli.parse_port("65535"), 65535)
+
+    def test_environment_rejects_wildcard_and_bad_format(self):
+        for value in ("0.0.0.0:5432", "0:5432", "localhost", "localhost:nope"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                piluli.parse_environment_endpoint(value)
+
+    def test_wildcard_requires_interactive_yes(self):
+        interactive = SimpleNamespace(isatty=lambda: True)
+        noninteractive = SimpleNamespace(isatty=lambda: False)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertTrue(piluli.confirm_wildcard("0.0.0.0", stdin=interactive, input_fn=lambda _: "yes"))
+            self.assertFalse(piluli.confirm_wildcard("0.0.0.0", stdin=interactive, input_fn=lambda _: "no"))
+            self.assertFalse(piluli.confirm_wildcard("0.0.0.0", stdin=noninteractive))
+        self.assertTrue(piluli.confirm_wildcard("127.0.0.1", stdin=noninteractive))
+
+    def test_occupied_port_is_rejected_before_serving(self):
+        with socket.socket() as occupied, tempfile.TemporaryDirectory() as directory:
+            occupied.bind(("127.0.0.1", 0))
+            occupied.listen()
+            port = occupied.getsockname()[1]
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                result = piluli.main(
+                    ["--no-browser", "--project-dir", directory, "--agent-dir", directory, "on", "127.0.0.1", str(port)],
+                    environ={},
+                )
+        self.assertEqual(result, 1)
+        self.assertIn("already in use", stderr.getvalue())
 
 
 class HttpTests(unittest.TestCase):
@@ -58,6 +125,13 @@ class HttpTests(unittest.TestCase):
                     self.assertIn('content="test-token"', data)
                     self.assertNotIn("__PILULI", data)
                 self.assertTrue(data)
+
+    def test_wildcard_accepts_matching_network_host_and_origin(self):
+        self.server.web_host = "0.0.0.0"
+        self.server.wildcard_host = True
+        authority = f"192.0.2.10:{self.server.server_port}"
+        with self.request("/", headers={"Host": authority, "Origin": "http://" + authority}) as response:
+            self.assertEqual(response.status, 200)
 
     def test_api_rejects_foreign_host_origin_token_and_scope(self):
         for headers in ({"Host": "evil.test"}, {"Origin": "https://evil.test"}, {"Origin": "http://127.0.0.1:42"}, {"X-Piluli-Token": "wrong"}):
