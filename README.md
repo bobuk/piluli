@@ -8,27 +8,23 @@ One codebase, two standalone Python scripts, zero third-party dependencies.
 
 ## 🚀 Install
 
-Requires Python **3.10+**, [`gh`](https://cli.github.com/) authenticated as someone who can read this private repository, and `pi` in `PATH` for package operations.
+Requires Python **3.10+** and `pi` in `PATH` for package operations.
 
 Choose your preferred dosage:
 
 ```sh
 # Piluli — browser UI
-curl -fsSL -H "Authorization: Bearer $(gh auth token)" \
-  https://raw.githubusercontent.com/bobuk/piluli/main/install.py \
+curl -fsSL https://raw.githubusercontent.com/bobuk/piluli/main/install.py \
   | python3 - piluli
 
 # Pilulit — terminal UI
-curl -fsSL -H "Authorization: Bearer $(gh auth token)" \
-  https://raw.githubusercontent.com/bobuk/piluli/main/install.py \
+curl -fsSL https://raw.githubusercontent.com/bobuk/piluli/main/install.py \
   | python3 - pilulit
 ```
 
 The installer puts the selected script in the first usual local bin directory already on `PATH`: `~/.local/bin`, `~/bin`, or `~/.bin`. If none is on `PATH`, it uses `~/.local/bin` and politely tells you what to export.
 
 Run both commands if you want both interfaces. Rerun one to update it. This is package management in the same sense that carrying a sandwich is catering.
-
-Because the repository is private, the initial `curl` and the installer both authenticate through `gh`. Tokens are neither printed nor stored by Piluli.
 
 ## ✨ Use
 
@@ -149,7 +145,7 @@ web/                 browser interface
 build.py             standalone builder
 dist/piluli.py       standalone browser executable
 dist/pilulit.py      standalone terminal executable
-install.py           private-GitHub curl installer
+install.py           curl installer
 tests/                standard-library tests and optional browser checks
 ```
 

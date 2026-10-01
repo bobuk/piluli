@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Install one of Piluli's standalone scripts from its private GitHub repository."""
+"""Install one of Piluli's standalone scripts from GitHub."""
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 import tempfile
 import urllib.error
@@ -28,42 +27,12 @@ class InstallError(Exception):
     """A friendly installation failure."""
 
 
-def github_token() -> str:
-    """Return a token for the private repository without printing it."""
-    for name in ("GH_TOKEN", "GITHUB_TOKEN"):
-        if token := os.environ.get(name, "").strip():
-            return token
-    try:
-        result = subprocess.run(
-            ["gh", "auth", "token"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired) as error:
-        raise InstallError("GitHub CLI is required; install `gh` and run `gh auth login`.") from error
-    token = result.stdout.strip()
-    if result.returncode or not token:
-        raise InstallError("Could not get a GitHub token; run `gh auth login` first.")
-    return token
-
-
 def download(tool: str) -> str:
     if tool not in TOOLS:
         raise InstallError(f"Unknown script: {tool}")
-    url = f"https://api.github.com/repos/{REPOSITORY}/contents/dist/{tool}.py?ref={BRANCH}"
-    request = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/vnd.github.raw+json",
-            "Authorization": f"Bearer {github_token()}",
-            "User-Agent": "piluli-installer",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-    )
+    url = f"https://raw.githubusercontent.com/{REPOSITORY}/{BRANCH}/dist/{tool}.py"
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(url, timeout=30) as response:
             return response.read().decode("utf-8")
     except (urllib.error.URLError, UnicodeError) as error:
         raise InstallError(f"Could not download {tool} from GitHub: {error}") from error

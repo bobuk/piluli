@@ -21,6 +21,17 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(selected, installer.INSTALL_CANDIDATES[1])
         self.assertTrue(on_path)
 
+    def test_download_uses_public_raw_url(self):
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = b"print('public pill')\n"
+        with mock.patch.object(installer.urllib.request, "urlopen", return_value=response) as urlopen:
+            source = installer.download("piluli")
+        self.assertEqual(source, "print('public pill')\n")
+        urlopen.assert_called_once_with(
+            "https://raw.githubusercontent.com/bobuk/piluli/main/dist/piluli.py",
+            timeout=30,
+        )
+
     def test_install_writes_executable_atomically(self):
         source = "#!/usr/bin/env python3\nprint('tiny, but employed')\n"
         with tempfile.TemporaryDirectory() as directory:
