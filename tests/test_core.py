@@ -219,6 +219,68 @@ class CoreTests(unittest.TestCase):
         file = self.skill(self.project / ".pi/skills/a/SKILL.md")
         self.assertEqual(metadata(file)["description"], "First line second line")
 
+    def skills_cli_lock(self, agents_dir, *names):
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        data = {"version": 3, "skills": {name: {"source": "org/repo-" + name} for name in names}}
+        (agents_dir / ".skill-lock.json").write_text(json.dumps(data))
+
+    def test_skills_cli_lock_marks_managed_skills_only(self):
+        self.skill(self.home / ".agents/skills/managed/SKILL.md", "managed")
+        self.skill(self.home / ".agents/skills/plain/SKILL.md", "plain")
+        self.skill(self.agent / "skills/local/SKILL.md", "local")
+        self.skills_cli_lock(self.home / ".agents", "managed")
+        rows = {r["name"]: r for r in self.rows("user", "skills")}
+        self.assertEqual(rows["managed"]["skillsCli"], "org/repo-managed")
+        self.assertEqual(rows["plain"]["skillsCli"], "")
+        self.assertEqual(rows["local"]["skillsCli"], "")
+
+    def test_skills_cli_symlink_marks_once_and_project_lock(self):
+        managed = self.skill(self.home / ".agents/skills/managed/SKILL.md", "managed")
+        self.skill(self.project / ".agents/skills/local-skill/SKILL.md", "local-skill")
+        self.skills_cli_lock(self.home / ".agents", "managed")
+        self.skills_cli_lock(self.project / ".agents", "local-skill")
+        (self.agent / "skills").mkdir()
+        (self.agent / "skills/managed").symlink_to(managed.parent, target_is_directory=True)
+        rows = self.rows(kind="skills")
+        self.assertEqual(len([r for r in rows if r["name"] == "managed"]), 1)
+        self.assertEqual({r["name"]: r["skillsCli"] for r in rows},
+                         {"managed": "org/repo-managed", "local-skill": "org/repo-local-skill"})
+
+    def test_skill_action_removes_through_skills_cli(self):
+        self.skill(self.home / ".agents/skills/managed/SKILL.md", "managed")
+        self.skill(self.project / ".agents/skills/local-skill/SKILL.md", "local-skill")
+        self.skills_cli_lock(self.home / ".agents", "managed")
+        self.skills_cli_lock(self.project / ".agents", "local-skill")
+        state = self.manager.state("user")
+        row = state["resources"]["skills"][0]
+        with patch.object(self.manager, "_run", return_value="ok") as run:
+            self.manager.skill_action("user", "remove", resource_id=row["id"], revision=state["revision"])
+            run.assert_called_once_with(["-y", "skills", "remove", "managed", "-y", "--global"], executable="npx")
+        state = self.manager.state("project")
+        row = next(r for r in state["resources"]["skills"] if r["name"] == "local-skill")
+        with patch.object(self.manager, "_run", return_value="ok") as run:
+            self.manager.skill_action("project", "remove", resource_id=row["id"], revision=state["revision"])
+            run.assert_called_once_with(["-y", "skills", "remove", "local-skill", "-y"], executable="npx")
+
+    def test_skill_action_rejects_unmanaged_unknown_and_stale(self):
+        self.skill(self.agent / "skills/plain/SKILL.md", "plain")
+        state = self.manager.state("user")
+        row = state["resources"]["skills"][0]
+        with patch.object(self.manager, "_run") as run:
+            with self.assertRaisesRegex(PiluliError, "skills CLI"):
+                self.manager.skill_action("user", "remove", resource_id=row["id"], revision=state["revision"])
+            with self.assertRaises(PiluliError):
+                self.manager.skill_action("user", "remove", resource_id="missing", revision=state["revision"])
+            with self.assertRaises(PiluliError):
+                self.manager.skill_action("user", "update", resource_id=row["id"], revision=state["revision"])
+            self.settings("project", {"theme": "changed elsewhere"})
+            self.skill(self.home / ".agents/skills/managed/SKILL.md", "managed")
+            self.skills_cli_lock(self.home / ".agents", "managed")
+            managed = next(r for r in self.manager.state("user")["resources"]["skills"] if r["name"] == "managed")
+            with self.assertRaisesRegex(PiluliError, "Refresh"):
+                self.manager.skill_action("user", "remove", resource_id=managed["id"], revision=state["revision"])
+            run.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -174,7 +174,8 @@ class TerminalApp:
             marker = "*" if pending else " "
             origin = "user" if row["origin"] == "user" else row["origin"]
             status = "[x]" if enabled else "[ ]"
-            text = f"{marker} {status}  {row['name']}  · {origin}  · {row['source']}"
+            managed = "  · skills CLI" if row.get("skillsCli") else ""
+            text = f"{marker} {status}  {row['name']}  · {origin}  · {row['source']}{managed}"
             attr = s["selected"] if start + offset == self.index else c.A_NORMAL if enabled else s["muted"]
             if pending:
                 attr |= c.A_BOLD
@@ -279,6 +280,19 @@ class TerminalApp:
             self.notice("Done. Run /reload in Pi. " + terminal_text(message)[-180:], "enabled")
         self.operation(run)
 
+    def skill_remove(self, row):
+        if self.draft.changes:
+            self.notice("Apply (Enter) or discard (X) pending changes first.", "pending")
+            return
+        message = f"Remove skill: {row['name']}. Managed by the skills CLI ({row['skillsCli']}). npx skills remove deletes its files and lock entry, so skills update -g will not restore it. Continue?"
+        if not self.ask(message, confirm=True):
+            return
+        def run():
+            result = self.manager.skill_action(self.scope, "remove", resource_id=row["id"], revision=self.draft.state["revision"])
+            self.load()
+            self.notice("Done. " + terminal_text(result)[-180:], "enabled")
+        self.operation(run)
+
     def run(self):
         c = self.curses
         while True:
@@ -328,9 +342,13 @@ class TerminalApp:
             elif key == "U":
                 self.package_action("update-all")
             elif key in ("d", "D"):
-                self.package_action("remove")
+                row = self.selected()
+                if self.view != "packages" and row and row.get("skillsCli"):
+                    self.skill_remove(row)
+                else:
+                    self.package_action("remove")
             elif key == "?":
-                self.ask("↑↓ row; ←→ section. Space stages a toggle. Enter saves all changes atomically. G or Tab switches scope. / searches. X discards changes. I installs, U updates all, u/d updates/removes the selected package. Project overrides take precedence over user settings. Run /reload in Pi to load changes.")
+                self.ask("↑↓ row; ←→ section. Space stages a toggle. Enter saves all changes atomically. G or Tab switches scope. / searches. X discards changes. I installs, U updates all, u/d updates/removes the selected package. D on a skills CLI managed skill removes it via npx skills. Project overrides take precedence over user settings. Run /reload in Pi to load changes.")
 
 
 def main(argv=None):

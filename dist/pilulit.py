@@ -438,6 +438,11 @@ class PiManager:
                 canonical = row["path"] if row["_mode"] == "builtin" else str(Path(row["path"]).resolve())
                 unique.setdefault(canonical, row)
             rows[kind] = sorted(unique.values(), key=lambda r: (r["name"].casefold(), r["path"]))
+        # Skills CLI installs resolve into <agents>/skills/<name>, including through agent symlinks.
+        locks = self._skills_cli_locks()
+        for row in rows["skills"]:
+            entry = locks.get(str(Path(row["path"]).resolve().parent))
+            row["skillsCli"] = entry.get("source", "") if entry else ""
         return rows, sorted(packages, key=lambda p: p["name"].casefold())
 
     def _ancestor_agents(self):
@@ -450,6 +455,22 @@ class PiManager:
                 break
             current = current.parent
         return result
+
+    def _skills_cli_locks(self):
+        """Skills installed by the skills CLI (npx skills), by resolved skill directory."""
+        locks = {}
+        for agents_dir in [self.home / ".agents", *self._ancestor_agents()]:
+            try:
+                data = read_object(agents_dir / ".skill-lock.json")
+            except PiluliError:
+                continue
+            skills = data.get("skills")
+            if not isinstance(skills, dict):
+                continue
+            for name, entry in skills.items():
+                if isinstance(entry, dict) and name not in (".", "..") and re.fullmatch(r"[\w.+-]+", name or ""):
+                    locks[str((agents_dir / "skills" / name).resolve())] = entry
+        return locks
 
     def state(self, scope="project"):
         with self._lock:
@@ -538,10 +559,12 @@ class PiManager:
             raise PiluliError("Invalid package source")
         return source
 
-    def _run(self, args):
-        command = shutil.which(self.pi_command)
+    def _run(self, args, executable=None):
+        executable = executable or self.pi_command
+        command = shutil.which(executable)
         if not command:
-            raise PiluliError(f"Pi not found: {self.pi_command}")
+            label = "Pi" if executable == self.pi_command else executable
+            raise PiluliError(f"{label} not found: {executable}")
         try:
             result = subprocess.run(
                 [command, *args], cwd=self.project_dir, stdin=subprocess.DEVNULL,
@@ -588,6 +611,25 @@ class PiManager:
                 except PiluliError as error:
                     raise PiluliError(f"{package['name']}: {error}\nCompleted before failure: {len(output)}. Refresh the list.") from error
             return "\n".join(output) or "Done"
+
+    def skill_action(self, scope, action, *, resource_id=None, revision=None):
+        scope = self.scope(scope)
+        if action != "remove":
+            raise PiluliError("Unknown action")
+        with self._writing(scope):
+            if revision != self.revision():
+                raise PiluliError("Settings changed. Refresh the list first.")
+            resources, _ = self._snapshot(scope, self._settings())
+            row = next((r for r in resources["skills"] if r["id"] == resource_id), None)
+            if row is None or not row["skillsCli"]:
+                raise PiluliError("Only skills installed by the skills CLI can be removed this way")
+            skill_dir = Path(row["path"]).resolve().parent
+            # Removing through the CLI cleans its lock file and agent links, so
+            # `skills update -g` cannot resurrect the skill afterwards.
+            args = ["-y", "skills", "remove", skill_dir.name, "-y"]
+            if skill_dir.parent.parent == (self.home / ".agents").resolve():
+                args.append("--global")
+            return self._run(args, executable="npx") or "Skill removed"
 
 
 class Draft:
@@ -792,7 +834,8 @@ class TerminalApp:
             marker = "*" if pending else " "
             origin = "user" if row["origin"] == "user" else row["origin"]
             status = "[x]" if enabled else "[ ]"
-            text = f"{marker} {status}  {row['name']}  · {origin}  · {row['source']}"
+            managed = "  · skills CLI" if row.get("skillsCli") else ""
+            text = f"{marker} {status}  {row['name']}  · {origin}  · {row['source']}{managed}"
             attr = s["selected"] if start + offset == self.index else c.A_NORMAL if enabled else s["muted"]
             if pending:
                 attr |= c.A_BOLD
@@ -897,6 +940,19 @@ class TerminalApp:
             self.notice("Done. Run /reload in Pi. " + terminal_text(message)[-180:], "enabled")
         self.operation(run)
 
+    def skill_remove(self, row):
+        if self.draft.changes:
+            self.notice("Apply (Enter) or discard (X) pending changes first.", "pending")
+            return
+        message = f"Remove skill: {row['name']}. Managed by the skills CLI ({row['skillsCli']}). npx skills remove deletes its files and lock entry, so skills update -g will not restore it. Continue?"
+        if not self.ask(message, confirm=True):
+            return
+        def run():
+            result = self.manager.skill_action(self.scope, "remove", resource_id=row["id"], revision=self.draft.state["revision"])
+            self.load()
+            self.notice("Done. " + terminal_text(result)[-180:], "enabled")
+        self.operation(run)
+
     def run(self):
         c = self.curses
         while True:
@@ -946,9 +1002,13 @@ class TerminalApp:
             elif key == "U":
                 self.package_action("update-all")
             elif key in ("d", "D"):
-                self.package_action("remove")
+                row = self.selected()
+                if self.view != "packages" and row and row.get("skillsCli"):
+                    self.skill_remove(row)
+                else:
+                    self.package_action("remove")
             elif key == "?":
-                self.ask("↑↓ row; ←→ section. Space stages a toggle. Enter saves all changes atomically. G or Tab switches scope. / searches. X discards changes. I installs, U updates all, u/d updates/removes the selected package. Project overrides take precedence over user settings. Run /reload in Pi to load changes.")
+                self.ask("↑↓ row; ←→ section. Space stages a toggle. Enter saves all changes atomically. G or Tab switches scope. / searches. X discards changes. I installs, U updates all, u/d updates/removes the selected package. D on a skills CLI managed skill removes it via npx skills. Project overrides take precedence over user settings. Run /reload in Pi to load changes.")
 
 
 def main(argv=None):

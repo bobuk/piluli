@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -160,6 +161,26 @@ class HttpTests(unittest.TestCase):
                 self.request("/api/apply", body)
         self.assertFalse(self.manager.paths["project"].exists())
         self.assertFalse(self.manager.paths["user"].exists())
+
+    def test_skills_action_endpoint(self):
+        agents = self.root / "home/.agents"
+        skill = agents / "skills/managed/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("---\nname: managed\n---\n# Instructions")
+        (agents / ".skill-lock.json").write_text(json.dumps({"version": 3, "skills": {"managed": {"source": "org/repo"}}}))
+        with self.request("/api/state?scope=user") as response:
+            state = json.load(response)["data"]
+        row = state["resources"]["skills"][0]
+        self.assertEqual(row["skillsCli"], "org/repo")
+        with patch.object(self.manager, "_run", return_value="removed") as run:
+            with self.request("/api/skills/action", {"scope": "user", "action": "remove", "id": row["id"], "revision": state["revision"]}) as response:
+                self.assertEqual(json.load(response)["message"], "removed")
+            run.assert_called_once_with(["-y", "skills", "remove", "managed", "-y", "--global"], executable="npx")
+        for body in ({"scope": "user", "action": "remove", "id": "missing", "revision": self.manager.revision()},
+                     {"scope": "user", "action": "remove", "id": row["id"], "revision": "stale"}):
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                self.request("/api/skills/action", body)
+            self.assertEqual(error.exception.code, 400)
 
 
 class BuildTests(unittest.TestCase):

@@ -87,9 +87,9 @@
       const status = isPackage ? (row.installed ? "Installed" : "Not installed") : changed ? (enabled ? "Enable *" : "Disable *") : (enabled ? "Enabled" : "Disabled");
       const actions = isPackage
         ? row.manageable ? `<button class="row-action" data-action="update" aria-label="Update ${escape(row.name)}" title="Reinstall in this scope">↻</button><button class="row-action" data-action="remove" aria-label="Remove ${escape(row.name)}" title="Remove package">×</button>` : '<span class="origin">Inherited</span>'
-        : `<button class="switch" role="switch" aria-checked="${enabled}" data-action="toggle" aria-label="${escape(row.name)}: ${user ? "for user" : "in project"}"></button>`;
+        : `<button class="switch" role="switch" aria-checked="${enabled}" data-action="toggle" aria-label="${escape(row.name)}: ${user ? "for user" : "in project"}"></button>${row.skillsCli ? `<button class="row-action" data-action="remove-skill" aria-label="Remove ${escape(row.name)}" title="Remove via npx skills remove">×</button>` : ""}`;
       return `<tr data-id="${row.id}" class="${row.id === state.selected ? "selected" : ""} ${changed ? "pending" : ""}" aria-selected="${row.id === state.selected}" tabindex="${row.id === state.selected ? "0" : "-1"}">
-        <td><div class="item-heading">${isPackage ? "" : `<input type="checkbox" class="bulk-check" data-select="${row.id}" aria-label="Select ${escape(row.name)}">`}<span class="item-icon" aria-hidden="true">${escape(row.name.slice(0, 1).toUpperCase())}</span><div class="item-info"><strong>${escape(row.name)}</strong><small title="${escape(row.source)}">${escape(row.source)}${row.version ? ` · v${escape(row.version)}` : ""}</small></div></div></td>
+        <td><div class="item-heading">${isPackage ? "" : `<input type="checkbox" class="bulk-check" data-select="${row.id}" aria-label="Select ${escape(row.name)}">`}<span class="item-icon" aria-hidden="true">${escape(row.name.slice(0, 1).toUpperCase())}</span><div class="item-info"><strong>${escape(row.name)}</strong><small title="${escape(row.source)}">${escape(row.source)}${row.skillsCli ? ` · skills CLI (${escape(row.skillsCli)})` : ""}${row.version ? ` · v${escape(row.version)}` : ""}</small></div></div></td>
         <td><span class="origin ${row.origin === "user" ? "user" : ""}">${origins[row.origin] || escape(row.origin)}</span></td>
         <td><span class="state ${changed ? "pending" : enabled ? "" : "off"}">${status}</span></td><td><div class="actions">${actions}</div></td></tr>`;
     }).join("") : '<tr><td colspan="4" class="empty">No resources found. Change your search or install a package.</td></tr>';
@@ -186,6 +186,18 @@
       if (action === "install") { $("#source").value = ""; $("#install-dialog").close(); }
     });
   }
+  async function removeSkill(row) {
+    if (!state.data || state.busy || !row?.skillsCli) return;
+    if (state.pending.size) { notice("Apply or discard pending changes first.", true); return; }
+    const explanation = "The skill is managed by the skills CLI. It will be deleted via npx skills remove, which cleans the lock file and agent links, so skills update -g will not restore it.";
+    if (!await confirm("Remove skill?", `${row.name}\nSource: ${row.skillsCli}\n\n${explanation}`, "Remove")) return;
+    await work(async () => {
+      notice("Running the skills CLI…");
+      const result = await request("/api/skills/action", { scope: state.scope, action: "remove", id: row.id, revision: state.data.revision });
+      await load();
+      notice(result.message);
+    });
+  }
   function view(name, focus = false) { if (state.busy) return; state.view = name; state.selected = null; state.marked.clear(); render(focus); }
   $("#select-all").addEventListener("change", (event) => {
     if (state.busy || state.view === "packages") return;
@@ -209,6 +221,7 @@
     state.selected = row.id;
     const action = event.target.closest("button")?.dataset.action;
     if (action === "toggle") toggle(row);
+    else if (action === "remove-skill") removeSkill(row);
     else if (action) packageAction(action, row);
     else render(true);
   });

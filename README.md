@@ -122,7 +122,7 @@ A saved switch is an explicit enable/disable, not “return to inheritance.” Y
 | `X` | Discard | Discard |
 | `I` | Install package | Install package |
 | `u` / `U` | Package buttons | Update one / all |
-| `D` | Remove package | Remove package |
+| `D` | Remove package or managed skill | Remove package or managed skill |
 | `Esc` | Close or leave search | Cancel or clear search |
 | `Q` | — | Quit |
 | `?` | — | Help |
@@ -136,6 +136,12 @@ Install, update, and remove happen immediately rather than through **Apply**. Sa
 `pi update` is not scope-isolated, so Piluli reinstalls the configured source with `pi install` in the selected scope and preserves filters. Pinned versions stay pinned. Project operations use `--local --approve`; user operations use `--no-approve` without `--local`.
 
 Only install sources you trust. Package installation may execute code with your permissions, which is a very efficient way for trust issues to become filesystem issues.
+
+## 🧹 Skills CLI integration
+
+Skills installed with the [skills CLI](https://skills.sh/) (`npx skills add`) are marked `skills CLI` with their source in both interfaces. Disabling such a skill only affects Pi; the files stay put, and `skills update -g` would restore them if they were deleted by hand.
+
+To remove one for real, use its remove action — the × button in Piluli or `D` on the marked skill in Pilulit. The removal runs `npx skills remove`, which deletes the files, cleans the skills lock file, and unlinks every agent, so a later `skills update -g` will not bring the skill back. Requires `npx` in `PATH`.
 
 ## 🔒 Local by default
 

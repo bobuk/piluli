@@ -217,6 +217,8 @@ class PiluliRequestHandler(BaseHTTPRequestHandler):
                 message = self.server.manager.apply(scope, body.get("changes"), body.get("revision"))
             elif self.path == "/api/packages/action":
                 message = self.server.manager.package_action(scope, body.get("action"), package_id=body.get("id"), source=body.get("source"), revision=body.get("revision"))
+            elif self.path == "/api/skills/action":
+                message = self.server.manager.skill_action(scope, body.get("action"), resource_id=body.get("id"), revision=body.get("revision"))
             else:
                 self.send_json(404, ok=False, error="Not found")
                 return
